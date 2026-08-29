@@ -1,0 +1,26 @@
+name: Upstream drift watch
+
+# Signals when elie222/inbox-zero advances past this fork's mirrored `main`, so the carried patches get replayed onto `carter` deliberately rather than drifting. Acting on every signal would be pointless — upstream lands several commits a day — so the routine is: act on a release worth having, a security fix, or a conflicted topic branch, with a monthly floor regardless.
+
+on:
+  schedule:
+    - cron: "0 13 * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: upstream-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    if: github.repository == 'CarterPape/inbox-zero'
+    permissions:
+      contents: read
+      issues: write
+    uses: CarterPape/upstream-drift-watch/.github/workflows/upstream-watch.yml@main
+    with:
+      upstream_repo: elie222/inbox-zero
+      upstream_branch: main
+      fork_branch: main
+      feature_branch: carter
+      mention: CarterPape
