@@ -3,6 +3,9 @@ import { Provider } from "@/utils/llms/config";
 
 type ProviderOptions = Record<string, Record<string, JSONValue>>;
 
+// Anthropic's two cache lifetimes: 5m bills writes at 1.25x base input, 1h at 2x, and both read at 0.1x. Keep in sync with LLM_PROMPT_CACHE_TTL in env.ts.
+export type SystemCacheTtl = "5m" | "1h";
+
 // Providers that forward Anthropic-style `cache_control` markers to an Anthropic
 // model: the native provider plus gateways that pass provider options through
 // verbatim. The marker is namespaced under `anthropic`, so it is inert on any
@@ -53,12 +56,14 @@ export function buildCachedSystemMessages({
   system,
   prompt,
   provider,
+  ttl = "5m",
 }: {
   system: string;
   prompt: string;
   provider: string;
+  ttl?: SystemCacheTtl;
 }): ModelMessage[] {
-  const cacheMarker = getSystemMessageCacheMarker(provider);
+  const cacheMarker = getSystemMessageCacheMarker(provider, ttl);
 
   return [
     {
@@ -72,9 +77,15 @@ export function buildCachedSystemMessages({
 
 function getSystemMessageCacheMarker(
   provider: string,
+  ttl: SystemCacheTtl,
 ): ProviderOptions | undefined {
   if (ANTHROPIC_CACHE_CONTROL_PROVIDERS.has(provider)) {
-    return { anthropic: { cacheControl: { type: "ephemeral" } } };
+    // Only the extended cache carries an explicit `ttl`, so the default request stays byte-identical to one built before this option existed.
+    return {
+      anthropic: {
+        cacheControl: { type: "ephemeral", ...(ttl === "1h" ? { ttl } : {}) },
+      },
+    };
   }
   // Bedrock uses its own marker shape (`cachePoint`), read from
   // `providerOptions.bedrock.cachePoint` by @ai-sdk/amazon-bedrock.

@@ -135,6 +135,8 @@ const parsedEnv = createEnv({
     // Deprecated: use ECONOMY_LLMS instead. Kept so older deployments are converted at startup.
     ECONOMY_LLM_FALLBACKS: z.string().optional(),
     // Deprecated: use CHAT_LLMS instead. Kept so older deployments are converted at startup.
+    // Anthropic prompt-cache lifetime. "1h" bills writes at 2x instead of 1.25x but survives sparse traffic; see utils/llms/caching.ts.
+    LLM_PROMPT_CACHE_TTL: z.enum(["5m", "1h"]).default("5m"),
     CHAT_LLM_PROVIDER: llmProviderEnum.optional(),
     // Deprecated: use CHAT_LLMS instead. Kept so older deployments are converted at startup.
     CHAT_LLM_MODEL: z.string().optional(),

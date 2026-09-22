@@ -54,9 +54,11 @@ import {
   type SelectModel,
 } from "@/utils/llms/model";
 import { getModelForUseCase, type LlmUseCase } from "@/utils/llms/use-cases";
+import { env } from "@/env";
 import {
   buildCachedSystemMessages,
   getSystemCacheProviderOptions,
+  type SystemCacheTtl,
 } from "@/utils/llms/caching";
 import {
   assertTrialAiUsageAllowed,
@@ -561,6 +563,7 @@ export function createGenerateObject({
             providerOptions,
             provider: candidate.provider,
             cacheKey: emailAccount.id,
+            ttl: env.LLM_PROMPT_CACHE_TTL,
           })
         : undefined;
 
@@ -1446,11 +1449,13 @@ function buildSystemPromptCacheOverrides({
   providerOptions,
   provider,
   cacheKey,
+  ttl,
 }: {
   protectedOptions: { instructions?: unknown; prompt?: unknown };
   providerOptions: LLMProviderOptions;
   provider: string;
   cacheKey: string;
+  ttl: SystemCacheTtl;
 }):
   | {
       messages: ModelMessage[];
@@ -1471,6 +1476,7 @@ function buildSystemPromptCacheOverrides({
       system: protectedOptions.instructions,
       prompt: protectedOptions.prompt,
       provider,
+      ttl,
     }),
     instructions: undefined,
     prompt: undefined,

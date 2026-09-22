@@ -8,6 +8,7 @@ const {
   mockNoObjectGeneratedErrorIsInstance,
   mockSaveAiUsage,
   mockShouldForceNanoModel,
+  mockEnv,
 } = vi.hoisted(() => ({
   mockAssertTrialAiUsageAllowed: vi.fn(),
   mockAttachLlmRepairMetadata: vi.fn(),
@@ -16,6 +17,13 @@ const {
   mockNoObjectGeneratedErrorIsInstance: vi.fn(() => false),
   mockSaveAiUsage: vi.fn(),
   mockShouldForceNanoModel: vi.fn(),
+  mockEnv: {
+    NODE_ENV: "test",
+    NANO_LLMS: "",
+    NEXT_PUBLIC_POSTHOG_KEY: "",
+    EMAIL_ENCRYPT_SALT: "test-salt",
+    LLM_PROMPT_CACHE_TTL: "5m" as "5m" | "1h",
+  },
 }));
 
 vi.mock("ai", () => ({
@@ -36,14 +44,7 @@ vi.mock("@posthog/ai", () => ({
   captureAiGeneration: vi.fn(),
 }));
 
-vi.mock("@/env", () => ({
-  env: {
-    NODE_ENV: "test",
-    NANO_LLMS: "",
-    NEXT_PUBLIC_POSTHOG_KEY: "",
-    EMAIL_ENCRYPT_SALT: "test-salt",
-  },
-}));
+vi.mock("@/env", () => ({ env: mockEnv }));
 
 vi.mock("@/utils/usage", () => ({
   saveAiUsage: mockSaveAiUsage,
@@ -387,6 +388,32 @@ describe("createGenerateObject repairText", () => {
       expect(systemMessage.providerOptions).toEqual({
         anthropic: { cacheControl: { type: "ephemeral" } },
       });
+    });
+
+    it("applies the configured cache lifetime to the system breakpoint", async () => {
+      mockEnv.LLM_PROMPT_CACHE_TTL = "1h";
+
+      try {
+        const generateObject = await createTestGenerateObject({
+          provider: "anthropic",
+          modelName: "claude-test",
+          cacheSystemPrompt: true,
+        });
+
+        await generateObject({
+          instructions: "Return JSON.",
+          prompt: "Classify this.",
+          schema: {} as any,
+        } as any);
+
+        expect(
+          mockGenerateObject.mock.calls[0][0].messages[0].providerOptions,
+        ).toEqual({
+          anthropic: { cacheControl: { type: "ephemeral", ttl: "1h" } },
+        });
+      } finally {
+        mockEnv.LLM_PROMPT_CACHE_TTL = "5m";
+      }
     });
 
     it("sets an OpenAI prompt cache key (no message marker) when opted in", async () => {

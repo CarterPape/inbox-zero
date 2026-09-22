@@ -67,6 +67,51 @@ describe("buildCachedSystemMessages", () => {
     expect(userMessage.providerOptions).toBeUndefined();
   });
 
+  it.each([
+    "anthropic",
+    "openrouter",
+    "aigateway",
+  ])("adds the extended cache lifetime for %s when asked for 1h", (provider) => {
+    const [systemMessage] = buildCachedSystemMessages({
+      ...base,
+      provider,
+      ttl: "1h",
+    });
+
+    expect(systemMessage.providerOptions).toEqual({
+      anthropic: { cacheControl: { type: "ephemeral", ttl: "1h" } },
+    });
+  });
+
+  it("omits ttl entirely at 5m, so the default request shape is unchanged", () => {
+    const [explicit] = buildCachedSystemMessages({
+      ...base,
+      provider: "anthropic",
+      ttl: "5m",
+    });
+    const [defaulted] = buildCachedSystemMessages({
+      ...base,
+      provider: "anthropic",
+    });
+
+    expect(explicit.providerOptions).toEqual({
+      anthropic: { cacheControl: { type: "ephemeral" } },
+    });
+    expect(explicit.providerOptions).toEqual(defaulted.providerOptions);
+  });
+
+  it("ignores ttl for bedrock, which has no equivalent marker", () => {
+    const [systemMessage] = buildCachedSystemMessages({
+      ...base,
+      provider: "bedrock",
+      ttl: "1h",
+    });
+
+    expect(systemMessage.providerOptions).toEqual({
+      bedrock: { cachePoint: { type: "default" } },
+    });
+  });
+
   it("uses the bedrock cachePoint marker shape for bedrock", () => {
     const [systemMessage] = buildCachedSystemMessages({
       ...base,
