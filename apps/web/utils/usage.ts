@@ -101,6 +101,7 @@ export async function saveAiUsage({
     isUserApiKey,
     inputTokens,
     cachedInputTokens,
+    cacheCreationInputTokens,
     outputTokens,
     reasoningTokens,
     totalTokens,
