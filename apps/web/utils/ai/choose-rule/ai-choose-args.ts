@@ -106,6 +106,8 @@ export async function aiGenerateArgs({
       level: "full",
       outputConstraint: "plain-text",
     },
+    // getSystemPrompt() is a constant, and the action templates ride in the tool schema, which precedes the system prompt in the cached prefix.
+    cacheSystemPrompt: true,
     onModelUsed: attributionTracker.onModelUsed,
   });
 
